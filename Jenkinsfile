@@ -1,4 +1,3 @@
-```groovy
 pipeline {
     agent any
 
@@ -7,13 +6,13 @@ pipeline {
         stage('Pull Code from GitHub') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/rajeshark/terraform-s3-bucket-create-and-host-static-website-IAC-code-in-HCL--project.git'
+                    url: 'https://github.com/balajits4924-cpu/terraform-s3-bucket-create-and-host-static-website-IAC-code-in-HCL--project.git'
             }
         }
 
         stage('Terraform Init & Apply') {
             steps {
-                withAWS(credentials: 'aws-cred-rajesh', region: 'ap-south-1') {
+                withAWS(credentials: '71f378d2-ae79-45a3-b1ae-eb2cf895e5f4', region: 'us-east-1') {
                     sh 'terraform init'
                     sh 'terraform validate'
                     sh 'terraform apply -auto-approve'
@@ -23,9 +22,9 @@ pipeline {
 
         stage('Upload Files to S3') {
             steps {
-                withAWS(credentials: 'aws-cred-rajesh', region: 'us-east-1') {
+                withAWS(credentials: '71f378d2-ae79-45a3-b1ae-eb2cf895e5f4', region: 'us-east-1') {
                     sh '''
-                        BUCKET_NAME=$(terraform output -raw name)
+                        BUCKET_NAME="demojnk"
 
                         echo "Uploading files to S3 bucket: $BUCKET_NAME"
 
@@ -46,7 +45,7 @@ pipeline {
     post {
         success {
             echo 'Static website deployment successful!'
-            sh 'terraform output -raw name'
+            echo 'Files uploaded to S3 bucket: demojnk'
         }
 
         failure {
@@ -54,4 +53,3 @@ pipeline {
         }
     }
 }
-```
