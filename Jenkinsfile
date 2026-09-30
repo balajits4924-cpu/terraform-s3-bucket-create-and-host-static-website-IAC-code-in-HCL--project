@@ -1,48 +1,57 @@
+```groovy
 pipeline {
     agent any
+
     stages {
-        stage ('pull code from github') {
+
+        stage('Pull Code from GitHub') {
             steps {
-                git branch: 'master', url: 'https://github.com/rajeshark/terraform-s3-bucket-create-and-host-static-website-IAC-code-in-HCL--project.git'
+                git branch: 'main',
+                    url: 'https://github.com/rajeshark/terraform-s3-bucket-create-and-host-static-website-IAC-code-in-HCL--project.git'
             }
         }
-   
-        stage ('terraform apply & init') {
+
+        stage('Terraform Init & Apply') {
             steps {
-                withAWS(credentials: 'my key', region: 'ap-south-1') {
+                withAWS(credentials: 'aws-cred-rajesh', region: 'ap-south-1') {
                     sh 'terraform init'
                     sh 'terraform validate'
                     sh 'terraform apply -auto-approve'
                 }
             }
         }
-        
-        stage ('upload files to s3 bucket') {
+
+        stage('Upload Files to S3') {
             steps {
-                withAWS(credentials: 'aws-cred-rajesh', region: 'eu-north-1') {
+                withAWS(credentials: 'aws-cred-rajesh', region: 'us-east-1') {
                     sh '''
-                        BUCKET_NAME=$(terraform output -raw name | cut -d'.' -f1)
+                        BUCKET_NAME=$(terraform output -raw name)
+
+                        echo "Uploading files to S3 bucket: $BUCKET_NAME"
+
                         aws s3 sync ./ s3://$BUCKET_NAME \
-                          --exclude ".git/*" \
-                          --exclude ".terraform/*" \
-                          --exclude "terraform.lock.hcl" \
-                          --exclude "*.tf" \
-                          --exclude "*.hcl" \
-                          --exclude "Jenkinsfile" \
-                          --exclude "*.md"
+                            --exclude ".git/*" \
+                            --exclude ".terraform/*" \
+                            --exclude "terraform.lock.hcl" \
+                            --exclude "*.tf" \
+                            --exclude "*.hcl" \
+                            --exclude "Jenkinsfile" \
+                            --exclude "*.md"
                     '''
                 }
             }
         }
     }
-    
+
     post {
         success {
-            echo 'static website deployment successful'
+            echo 'Static website deployment successful!'
             sh 'terraform output -raw name'
         }
+
         failure {
-            echo 'static website deployment failure'
+            echo 'Static website deployment failed!'
         }
     }
 }
+```
