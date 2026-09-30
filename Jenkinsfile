@@ -1,42 +1,48 @@
-
 pipeline {
     agent any
-
     stages {
-
-        stage('Clone Code') {
+        stage ('pull code from github') {
             steps {
-                echo 'Cloning code from GitHub...'
-                checkout scm
+                git branch: 'master', url: 'https://github.com/rajeshark/terraform-s3-bucket-create-and-host-static-website-IAC-code-in-HCL--project.git'
             }
         }
-
-        stage('Deploy') {
+   
+        stage ('terraform apply & init') {
             steps {
-                echo 'Deploying website to Ubuntu...'
-
-                sh '''
-                    sudo cp index.html /var/www/html/
-                    sudo cp style.css /var/www/html/
-                '''
+                withAWS(credentials: 'my key', region: 'ap-south-1') {
+                    sh 'terraform init'
+                    sh 'terraform validate'
+                    sh 'terraform apply -auto-approve'
+                }
             }
         }
-
-        stage('Restart Nginx') {
+        
+        stage ('upload files to s3 bucket') {
             steps {
-                echo 'Restarting Nginx...'
-                sh 'sudo systemctl restart nginx'
+                withAWS(credentials: 'aws-cred-rajesh', region: 'eu-north-1') {
+                    sh '''
+                        BUCKET_NAME=$(terraform output -raw name | cut -d'.' -f1)
+                        aws s3 sync ./ s3://$BUCKET_NAME \
+                          --exclude ".git/*" \
+                          --exclude ".terraform/*" \
+                          --exclude "terraform.lock.hcl" \
+                          --exclude "*.tf" \
+                          --exclude "*.hcl" \
+                          --exclude "Jenkinsfile" \
+                          --exclude "*.md"
+                    '''
+                }
             }
         }
     }
-
+    
     post {
         success {
-            echo '✅ Website deployed successfully!'
+            echo 'static website deployment successful'
+            sh 'terraform output -raw name'
         }
-
         failure {
-            echo '❌ Deployment failed!'
+            echo 'static website deployment failure'
         }
     }
 }
